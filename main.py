@@ -31,7 +31,7 @@ def intercambio(ip_vecino, puerto_vecino, neighbors_dict, target_id):
 mi_jugador = Player() # Instanciamos un jugador
 vecinos = {} # Aquí el udp_node guarda toda la info que sabe de cada vecino y la función intercambio modifica los nodos implicados
 renderer = GameRenderer(800, 600)
-pygame.display.set_caption(f"Streetpass P2P")
+pygame.display.set_caption(f"Intercambio P2P")
 clock = pygame.time.Clock()
 
 # Arrancamos el servidor Pyro que emite (es un hilo)
