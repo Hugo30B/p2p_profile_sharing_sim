@@ -13,6 +13,11 @@ class StreetPassService:
         return {
             "nombre": self.player.nombre,
             "skin_color": self.player.skin_color,
+            "shoes_color": self.player.shoes_color,
+            "pants_color": self.player.pants_color,
+            "tshirt_color": self.player.tshirt_color,
+            "glasses_type": self.player.glasses_type,
+            "hat_type": self.player.hat_type,
             "mensaje": "Hola!"
         }
 

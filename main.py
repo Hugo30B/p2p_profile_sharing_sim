@@ -7,6 +7,7 @@ from core.player import Player
 from network.udp_node import UDPNode
 from network.pyro_node import PyroServer
 from ui.renderer import GameRenderer
+from ui.character_creator import CharacterCreator
 
 # Función de intercambio (petición con Pyro)
 def intercambio(ip_vecino, puerto_vecino, neighbors_dict, target_id):
@@ -18,6 +19,11 @@ def intercambio(ip_vecino, puerto_vecino, neighbors_dict, target_id):
             # Actualizamos el vecino con sus datos reales, estos datos se añaden por encima (por ejemplo el campo revelado nunca existía)
             neighbors_dict[target_id].update({
                 "skin_color": perfil["skin_color"],
+                "shoes_color": perfil["shoes_color"],
+                "pants_color": perfil["pants_color"],
+                "tshirt_color": perfil["tshirt_color"],
+                "glasses_type": perfil["glasses_type"],
+                "hat_type": perfil["hat_type"],
                 "nombre": perfil["nombre"],
                 "revelado": True
             })
@@ -27,11 +33,15 @@ def intercambio(ip_vecino, puerto_vecino, neighbors_dict, target_id):
         if target_id in neighbors_dict:
             neighbors_dict[target_id]["revelado"] = False
 
-
 mi_jugador = Player() # Instanciamos un jugador
-vecinos = {} # Aquí el udp_node guarda toda la info que sabe de cada vecino y la función intercambio modifica los nodos implicados
+vecinos = {} # Aquí el udp_node guarda toda la info que sabe de cada vecino y la función intercambio modifica los nodos implkicados
 renderer = GameRenderer(800, 600)
 pygame.display.set_caption(f"Intercambio P2P")
+
+# Pantalla de creación usando el nuevo módulo
+creator = CharacterCreator(renderer)
+creator.run(mi_jugador)
+
 clock = pygame.time.Clock()
 
 # Arrancamos el servidor Pyro que emite (es un hilo)
