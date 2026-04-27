@@ -43,8 +43,11 @@ class UDPNode:
         while self.running:
             try:
                 data, addr = self.sock.recvfrom(1024)
-                info = json.loads(data.decode())
-                
+                try:
+                    info = json.loads(data.decode())
+                except json.JSONDecodeError:
+                    continue
+
                 # Ignorarse a mí mismo
                 if info["id"] == self.player.id:
                     continue
