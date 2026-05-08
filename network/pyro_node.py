@@ -27,21 +27,21 @@ class SocialService:
 
     def request_follow(self, requester_profile):
         """Solicitud de seguimiento"""
-        return self.social_controller.handle_incoming_follow(requester_profile)
+        return self.social_controller.incoming_follow(requester_profile)
 
     def confirm_follow(self, sender_profile):
         """Confirma una solicitud aceptada."""
-        self.social_controller.handle_follow_confirm(sender_profile)
+        self.social_controller.follow_confirm(sender_profile)
         return {"accepted": True}
 
     def send_dm(self, sender_profile, text):
         """Recibe DM"""
-        self.social_controller.handle_incoming_dm(sender_profile, text)
+        self.social_controller.incoming_dm(sender_profile, text)
         return {"delivered": True}
 
     def send_reaction(self, sender_profile, text):
         """Recibe reaccion para mostrar en bocadillo."""
-        self.social_controller.handle_incoming_reaction(sender_profile, text)
+        self.social_controller.incoming_reaction(sender_profile, text)
         return {"delivered": True}
 
 class PyroServer:

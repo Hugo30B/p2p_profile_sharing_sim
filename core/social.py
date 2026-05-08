@@ -124,7 +124,7 @@ class SocialState:
         self.following.add(profile_id)
         self.followers.add(profile_id)
 
-    def handle_incoming_follow_request(self, requester_profile):
+    def incoming_follow_request(self, requester_profile):
         profile = self.update_profile_from_data(requester_profile)
         self.pending_incoming[profile.id] = profile
         return {
@@ -132,7 +132,7 @@ class SocialState:
             "profile": self.my_profile().to_dict(),
         }
 
-    def handle_outgoing_follow_accept(self, target_profile):
+    def outgoing_follow_accept(self, target_profile):
         profile = self.update_profile_from_data(target_profile)
         self.pending_outgoing.discard(profile.id)
         self.add_friend(profile.id)

@@ -76,7 +76,7 @@ class SocialController:
                 response = proxy.request_follow(self.state.my_profile().to_dict())
                 if response and response.get("accepted"):
                     profile = response.get("profile", {})
-                    self.state.handle_outgoing_follow_accept(profile)
+                    self.state.outgoing_follow_accept(profile)
         except Exception:
             self.state.pending_outgoing.discard(neighbor_id)
 
@@ -152,11 +152,11 @@ class SocialController:
         except Exception:
             pass
 
-    def handle_incoming_dm(self, sender_profile, text):
+    def incoming_dm(self, sender_profile, text):
         profile = self.state.update_profile_from_data(sender_profile)
         
         # Permite DM si son amigos o si están cerca (están en la lista de vecinos)
-        # Como handle_incoming_dm es llamado via RPC, el sender ya debe existir en neighbors pero para ser estrictos comprobamos la distancia si no son amigos.
+        # Como incoming_dm es llamado via RPC, el sender ya debe existir en neighbors pero para ser estrictos comprobamos la distancia si no son amigos.
         if not self.state.is_friend(profile.id):
             data = self.neighbors.get(profile.id)
             if not data:
@@ -170,18 +170,18 @@ class SocialController:
                 
         self.state.add_dm(profile.id, text, incoming=True)
 
-    def handle_incoming_reaction(self, sender_profile, text):
+    def incoming_reaction(self, sender_profile, text):
         profile = self.state.update_profile_from_data(sender_profile)
         self.state.add_reaction(profile.id, text)
 
-    def handle_incoming_follow(self, sender_profile):
+    def incoming_follow(self, sender_profile):
         profile = self.state.update_profile_from_data(sender_profile)
-        response = self.state.handle_incoming_follow_request(sender_profile)
+        response = self.state.incoming_follow_request(sender_profile)
         return response
 
-    def handle_follow_confirm(self, sender_profile):
+    def follow_confirm(self, sender_profile):
         profile = self.state.update_profile_from_data(sender_profile)
-        self.state.handle_outgoing_follow_accept(profile.to_dict())
+        self.state.outgoing_follow_accept(profile.to_dict())
         self.state.pending_outgoing.discard(profile.id)
 
     def refresh_known_profiles(self):
