@@ -74,6 +74,11 @@ class Player:
             "bio": self.bio,
             "status": self.status,
             "location": (self.x, self.y),
+            "friends": list(self.friends),
+            "followers": list(self.followers),
+            "following": list(self.following),
+            "social_list": self.social_list,
+            "pending_outgoing": list(self.pending_outgoing),
         }
 
     @classmethod
@@ -91,6 +96,13 @@ class Player:
         p.status = data.get("status", "")
         loc = data.get("location") or data.get("pos") or (0, 0)
         p.x, p.y = loc
+        
+        # Cargar estado social
+        p.friends = set(data.get("friends", []))
+        p.followers = set(data.get("followers", []))
+        p.following = set(data.get("following", []))
+        p.social_list = data.get("social_list", [])
+        p.pending_outgoing = set(data.get("pending_outgoing", []))
         return p
 
     # Métodos sociales

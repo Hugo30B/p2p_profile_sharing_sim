@@ -2,13 +2,14 @@ import pygame
 from core.player import Player
 from core.social_controller import SocialController
 from core.game_loop import run_game_loop
+from core.persistence import get_player_from_args, guardar_jugador
 from network.udp_node import UDPNode
 from network.pyro_node import PyroServer
 from ui.renderer import GameRenderer
 from ui.character_creator import CharacterCreator
 from ui.social_ui import SocialUI
 
-mi_jugador = Player()
+mi_jugador, perfil_path = get_player_from_args()
 vecinos = {}
 renderer = GameRenderer(800, 600)
 pygame.display.set_caption("Intercambio P2P")
@@ -26,3 +27,5 @@ udp_node = UDPNode(mi_jugador, vecinos)
 udp_node.start()
 
 run_game_loop(mi_jugador, vecinos, renderer, social_controller, social_ui)
+
+guardar_jugador(mi_jugador, perfil_path)

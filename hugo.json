@@ -1,0 +1,37 @@
+{
+    "id": "520c8d47-1b32-4d4b-afd3-5437a25e980a",
+    "nombre": "Hugo",
+    "skin_color": [
+        255,
+        224,
+        189
+    ],
+    "shoes_color": [
+        70,
+        130,
+        180
+    ],
+    "pants_color": [
+        50,
+        50,
+        50
+    ],
+    "tshirt_color": [
+        75,
+        0,
+        130
+    ],
+    "glasses_type": "simple",
+    "hat_type": "top",
+    "bio": "Hola!",
+    "status": "Disponible",
+    "location": [
+        395,
+        409
+    ],
+    "friends": [],
+    "followers": [],
+    "following": [],
+    "social_list": [],
+    "pending_outgoing": []
+}
