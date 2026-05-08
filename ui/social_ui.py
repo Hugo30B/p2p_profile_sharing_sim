@@ -46,7 +46,7 @@ class SocialUI:
     def select_profile(self, profile_id):
         self.selected_profile_id = profile_id
 
-    def handle_text_input(self, event):
+    def text_input(self, event):
         if self.current_tab != "dm":
             return
         if event.key == pygame.K_BACKSPACE:
