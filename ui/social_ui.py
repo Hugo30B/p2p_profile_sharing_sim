@@ -3,8 +3,8 @@ from config import REACTION_TEXTS
 
 
 class SocialUI:
-    def __init__(self, social_state):
-        self.social_state = social_state
+    def __init__(self, player):
+        self.player = player
         self.menu_open = False
         self.dm_target = None
         self.dm_input = ""

@@ -7,6 +7,7 @@ BIND_IP = "0.0.0.0"
 
 PROXIMITY_THRESHOLD = 60
 NEIGHBOR_TIMEOUT = 2.0 # Segundos sin recibir UDP antes de borrar al vecino
+VIEW_COOLDOWN = 4 # Segundos para volver a ser silueta después de revelar
 
 FOLLOW_DISTANCE = 70
 

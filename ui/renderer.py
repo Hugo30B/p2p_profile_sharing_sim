@@ -27,7 +27,7 @@ class GameRenderer:
         self.gradient_size = (screen_width, screen_height)
         self.layout = LayoutManager(self.screen.get_rect())
 
-    def render(self, player, neighbors, social_state, ui_state):
+    def render(self, player, neighbors, ui_state):
         """Dibuja todo el estado del juego."""
         self._draw_background()
 
@@ -40,27 +40,20 @@ class GameRenderer:
                 name = v_data.get("nombre", "Unknown")
                 name_tag = self.font.render(name, True, self.deep)
                 self.screen.blit(name_tag, (v_pos[0] - 20, v_pos[1] - 60))
-                reaction = social_state.get_active_reaction(v_id)
+                reaction = player.get_active_reaction(v_id)
                 if reaction:
                     self._draw_bubble((v_pos[0], v_pos[1] - 80), reaction)
             else:
-                # Si no está revelado, dibujar un círculo gris o negro
-                pygame.draw.circle(self.screen, (150, 150, 150), v_pos, self.player_radius)
+                # Si no está revelado, dibujar una silueta negra
+                self._draw_silhouette(v_pos)
 
         # 2. Dibujar mi jugador
-        my_data = {
-            "skin_color": player.skin_color,
-            "tshirt_color": player.tshirt_color,
-            "pants_color": player.pants_color,
-            "shoes_color": player.shoes_color,
-            "glasses_type": player.glasses_type,
-            "hat_type": player.hat_type
-        }
+        my_data = player.to_dict()
         self._draw_character((player.x, player.y), my_data)
-        self._draw_hud(player, social_state, neighbors)
+        self._draw_hud(player, neighbors)
 
         if ui_state.get("menu_open"):
-            self._draw_social_screen(player, social_state, ui_state, neighbors)
+            self._draw_social_screen(player, ui_state, neighbors)
 
         pygame.display.flip()
 
@@ -80,13 +73,13 @@ class GameRenderer:
         pygame.draw.circle(self.screen, (216, 205, 190), (680, 520), 140)
         pygame.draw.circle(self.screen, (229, 220, 208), (600, 120), 70)
 
-    def _draw_hud(self, player, social_state, neighbors):
+    def _draw_hud(self, player, neighbors):
         panel = self.layout.hud_panel_rect()
         self._draw_panel(panel)
         title = self.title_font.render(player.nombre, True, self.deep)
         self.screen.blit(title, (panel.x + 12, panel.y + 10))
         stats = self.small_font.render(
-            f"Seguidores {len(social_state.followers)}  Amigos {len(social_state.friends)}",
+            f"Seguidores {len(player.followers)}  Amigos {len(player.friends)}",
             True,
             self.deep,
         )
@@ -100,7 +93,7 @@ class GameRenderer:
         pygame.draw.rect(self.screen, self.panel_bg, rect, border_radius=10)
         pygame.draw.rect(self.screen, self.accent, rect, 2, border_radius=10)
 
-    def _draw_social_screen(self, player, social_state, ui_state, neighbors):
+    def _draw_social_screen(self, player, ui_state, neighbors):
         overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
         overlay.fill((248, 244, 238, 240))
         self.screen.blit(overlay, (0, 0))
@@ -116,13 +109,13 @@ class GameRenderer:
         content = self.layout.social_content_rect(frame)
         tab = ui_state.get("current_tab")
         if tab == "inicio":
-            self._draw_home_panel(content, player, social_state)
+            self._draw_home_panel(content, player)
         elif tab == "amigos":
-            self._draw_friends_panel(content, social_state, ui_state, neighbors)
+            self._draw_friends_panel(content, player, ui_state, neighbors)
         elif tab == "lista":
-            self._draw_social_list(content, social_state)
+            self._draw_social_list(content, player)
         elif tab == "dm":
-            self._draw_dm_panel(content, social_state, ui_state)
+            self._draw_dm_panel(content, player, ui_state)
         elif tab == "reacciones":
             self._draw_reaction_panel(content, ui_state)
 
@@ -162,25 +155,24 @@ class GameRenderer:
             self.screen.blit(text, (tab.x + 10, tab.y + 6))
             x += w + 10
 
-    def _draw_home_panel(self, panel, player, social_state):
+    def _draw_home_panel(self, panel, player):
         self._draw_panel(panel)
-        profile = social_state.my_profile()
-        self._draw_profile_card(panel.x + 20, panel.y + 20, profile, "Tu perfil")
+        self._draw_profile_card(panel.x + 20, panel.y + 20, player, "Tu perfil")
 
         stats_box = pygame.Rect(panel.x + 310, panel.y + 20, 350, 140)
         self._draw_panel(stats_box)
         header = self.font.render("Resumen", True, self.deep)
         self.screen.blit(header, (stats_box.x + 12, stats_box.y + 10))
         line1 = self.small_font.render(
-            f"Amigos: {len(social_state.friends)}", True, self.deep
+            f"Amigos: {len(player.friends)}", True, self.deep
         )
         self.screen.blit(line1, (stats_box.x + 12, stats_box.y + 40))
         line2 = self.small_font.render(
-            f"Seguidores: {len(social_state.followers)}", True, self.deep
+            f"Seguidores: {len(player.followers)}", True, self.deep
         )
         self.screen.blit(line2, (stats_box.x + 12, stats_box.y + 62))
         line3 = self.small_font.render(
-            f"Siguiendo: {len(social_state.following)}", True, self.deep
+            f"Siguiendo: {len(player.following)}", True, self.deep
         )
         self.screen.blit(line3, (stats_box.x + 12, stats_box.y + 84))
 
@@ -188,12 +180,12 @@ class GameRenderer:
         self._draw_panel(pending_box)
         header = self.font.render("Solicitudes", True, self.deep)
         self.screen.blit(header, (pending_box.x + 12, pending_box.y + 10))
-        if not social_state.pending_incoming:
+        if not player.pending_incoming:
             empty = self.small_font.render("No hay solicitudes.", True, self.deep)
             self.screen.blit(empty, (pending_box.x + 12, pending_box.y + 46))
         else:
             y = pending_box.y + 46
-            for idx, profile in enumerate(list(social_state.pending_incoming.values())[:4]):
+            for idx, profile in enumerate(list(player.pending_incoming.values())[:4]):
                 name = self.small_font.render(profile.nombre, True, self.deep)
                 self.screen.blit(name, (pending_box.x + 12, y))
                 accept = pygame.Rect(pending_box.x + 220, y - 2, 50, 22)
@@ -213,7 +205,7 @@ class GameRenderer:
         label = self.small_font.render("Cerca: usa Amigos", True, self.deep)
         self.screen.blit(label, (nearby_box.x + 12, nearby_box.y + 20))
 
-    def _draw_friends_panel(self, panel, social_state, ui_state, neighbors):
+    def _draw_friends_panel(self, panel, player, ui_state, neighbors):
         self._draw_panel(panel)
         left = self.layout.friends_left_rect(panel)
         self._draw_panel(left)
@@ -221,13 +213,13 @@ class GameRenderer:
         self.screen.blit(header, (left.x + 12, left.y + 10))
  
         y = left.y + 44
-        friends = list(social_state.friends)
+        friends = list(player.friends)
         if not friends:
             empty = self.small_font.render("Sin amigos aun.", True, self.deep)
             self.screen.blit(empty, (left.x + 12, y))
         else:
             for idx, friend_id in enumerate(friends[:8]):
-                profile = social_state.known_profiles.get(friend_id)
+                profile = player.known_profiles.get(friend_id)
                 if not profile:
                     continue
                 name = self.small_font.render(profile.nombre, True, self.deep)
@@ -239,11 +231,11 @@ class GameRenderer:
         title = self.small_font.render("Solicitudes", True, self.deep)
         self.screen.blit(title, (requests.x + 12, requests.y + 8))
         y = requests.y + 30
-        if not social_state.pending_incoming:
+        if not player.pending_incoming:
             empty = self.small_font.render("Ninguna", True, self.deep)
             self.screen.blit(empty, (requests.x + 12, y))
         else:
-            for profile in list(social_state.pending_incoming.values())[:3]:
+            for profile in list(player.pending_incoming.values())[:3]:
                 name = self.small_font.render(profile.nombre, True, self.deep)
                 self.screen.blit(name, (requests.x + 12, y))
                 y += 20
@@ -252,7 +244,7 @@ class GameRenderer:
         self._draw_panel(detail)
         target_id = ui_state.get("selected_profile_id")
         if target_id:
-            profile = social_state.known_profiles.get(target_id)
+            profile = player.known_profiles.get(target_id)
             if profile:
                 self._draw_character((detail.x + 60, detail.y + 80), profile.to_dict())
                 title = self.font.render(profile.nombre, True, self.deep)
@@ -263,18 +255,10 @@ class GameRenderer:
                 self.screen.blit(bio, (detail.x + 120, detail.y + 70))
                 
                 # Verificar si se puede abrir DM (Amigo O Cerca)
-                is_friend = social_state.is_friend(target_id)
+                is_friend = player.is_friend(target_id)
                 is_nearby = False
                 if target_id in neighbors:
-                    v_pos = neighbors[target_id].get("pos")
-                    if v_pos:
-                        dist = ((profile.location[0] - v_pos[0])**2 + (profile.location[1] - v_pos[1])**2)**0.5 # Simplified dist check
-                        # Actually we should use player pos, but let's just use a simpler check or a flag
-                        is_nearby = True # For simplicity in the renderer we can trust if it's in neighbors, but better to check dist
-                
-                # A more robust distance check using the player's current position (from profile object if updated)
-                # Wait, renderer doesn't have the 'player' object here, but it's passed to render().
-                # I'll use the neighbors list as a proxy for proximity or a simple check.
+                    is_nearby = True 
                 
                 button_color = (235, 230, 220) if (is_friend or is_nearby) else (200, 200, 200)
                 button = pygame.Rect(detail.x + 120, detail.y + 320, 160, 40)
@@ -283,11 +267,11 @@ class GameRenderer:
                 label = self.small_font.render("Abrir DM", True, self.deep if (is_friend or is_nearby) else (120, 120, 120))
                 self.screen.blit(label, (button.x + 22, button.y + 10))
                 
-                if not social_state.is_friend(target_id):
+                if not player.is_friend(target_id):
                     follow_btn = pygame.Rect(detail.x + 120, detail.y + 270, 160, 36)
                     pygame.draw.rect(self.screen, (235, 230, 220), follow_btn, border_radius=8)
                     pygame.draw.rect(self.screen, self.accent, follow_btn, 2, border_radius=8)
-                    if social_state.has_pending_outgoing(target_id):
+                    if player.has_pending_outgoing(target_id):
                         label = self.small_font.render("En espera", True, self.deep)
                     else:
                         label = self.small_font.render("Solicitar", True, self.deep)
@@ -296,14 +280,14 @@ class GameRenderer:
             hint = self.small_font.render("Selecciona un amigo.", True, self.deep)
             self.screen.blit(hint, (detail.x + 12, detail.y + 40))
 
-    def _draw_social_list(self, panel, social_state):
+    def _draw_social_list(self, panel, player):
         self._draw_panel(panel)
         header = self.font.render("Lista Social", True, self.deep)
         self.screen.blit(header, (panel.x + 12, panel.y + 10))
         x = panel.x + 12
         y = panel.y + 50
-        for idx, profile_id in enumerate(social_state.social_list[:9]):
-            profile = social_state.known_profiles.get(profile_id)
+        for idx, profile_id in enumerate(player.social_list[:9]):
+            profile = player.known_profiles.get(profile_id)
             if not profile:
                 continue
             slot = self.layout.social_list_slot(panel, idx)
@@ -319,18 +303,18 @@ class GameRenderer:
             else:
                 x += 220
 
-    def _draw_dm_panel(self, panel, social_state, ui_state):
+    def _draw_dm_panel(self, panel, player, ui_state):
         self._draw_panel(panel)
         header = self.font.render("Mensajes", True, self.deep)
         self.screen.blit(header, (panel.x + 12, panel.y + 10))
 
         target_id = ui_state.get("dm_target")
-        profile = social_state.known_profiles.get(target_id)
+        profile = player.known_profiles.get(target_id)
         if profile:
             title = self.small_font.render(f"Con {profile.nombre}", True, self.deep)
             self.screen.blit(title, (panel.x + 12, panel.y + 36))
 
-        thread = social_state.dm_threads.get(target_id, [])
+        thread = player.dm_threads.get(target_id, [])
         y = panel.y + 70
         for message in thread[-10:]:
             prefix = "Tu" if not message.incoming else "El"
@@ -371,6 +355,20 @@ class GameRenderer:
         pygame.draw.rect(self.screen, (255, 255, 255), rect, border_radius=8)
         pygame.draw.rect(self.screen, self.accent, rect, 2, border_radius=8)
         self.screen.blit(bubble, bubble.get_rect(center=rect.center))
+
+    def _draw_silhouette(self, pos):
+        """Dibuja una silueta negra genérica."""
+        x, y = pos
+        color = (30, 30, 30) # Gris muy oscuro / Negro
+        # Cabeza
+        pygame.draw.circle(self.screen, color, (x, y - 15), 15)
+        # Cuerpo
+        pygame.draw.rect(self.screen, color, (x - 12, y - 5, 24, 20))
+        # Pantalones
+        pygame.draw.rect(self.screen, color, (x - 12, y + 15, 24, 15))
+        # Zapatos
+        pygame.draw.rect(self.screen, color, (x - 12, y + 30, 10, 5))
+        pygame.draw.rect(self.screen, color, (x + 2, y + 30, 10, 5))
 
     def _draw_character(self, pos, data):
         x, y = pos

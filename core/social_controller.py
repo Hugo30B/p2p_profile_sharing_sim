@@ -1,18 +1,18 @@
 import threading
 import Pyro5.api
 from config import FOLLOW_DISTANCE, REACTION_DURATION
-from core.social import SocialState
 
 
 class SocialController:
     def __init__(self, player, neighbors):
         self.player = player
         self.neighbors = neighbors
-        self.state = SocialState(player, reaction_duration=REACTION_DURATION)
+        # El jugador ahora gestiona su propio estado social
+        self.player.reaction_duration = REACTION_DURATION
 
     def update_from_neighbor(self, neighbor_id, neighbor_data):
-        profile = self.state.update_profile_from_data(neighbor_data, neighbor_data.get("pos"))
-        self.state.mark_seen(profile.id, neighbor_data.get("pos"))
+        profile = self.player.update_profile_from_data(neighbor_data, neighbor_data.get("pos"))
+        self.player.mark_seen(profile.id, neighbor_data.get("pos"))
 
     def nearest_neighbor(self):
         closest = None
@@ -31,7 +31,7 @@ class SocialController:
         closest = None
         best_dist = None
         for v_id, v_data in self.neighbors.items():
-            if v_id not in self.state.friends:
+            if v_id not in self.player.friends:
                 continue
             v_pos = v_data.get("pos")
             if not v_pos:
@@ -60,9 +60,9 @@ class SocialController:
         data = self.neighbors.get(neighbor_id)
         if not data:
             return
-        if neighbor_id in self.state.friends or neighbor_id in self.state.pending_outgoing:
+        if neighbor_id in self.player.friends or neighbor_id in self.player.pending_outgoing:
             return
-        self.state.pending_outgoing.add(neighbor_id)
+        self.player.pending_outgoing.add(neighbor_id)
         threading.Thread(
             target=self._follow_thread,
             args=(neighbor_id, data),
@@ -73,15 +73,15 @@ class SocialController:
         uri = f"PYRO:social@{data['ip']}:{data['pyro_port']}"
         try:
             with Pyro5.api.Proxy(uri) as proxy:
-                response = proxy.request_follow(self.state.my_profile().to_dict())
+                response = proxy.request_follow(self.player.to_dict())
                 if response and response.get("accepted"):
-                    profile = response.get("profile", {})
-                    self.state.outgoing_follow_accept(profile)
+                    profile_dict = response.get("profile", {})
+                    self.player.outgoing_follow_accept(profile_dict)
         except Exception:
-            self.state.pending_outgoing.discard(neighbor_id)
+            self.player.pending_outgoing.discard(neighbor_id)
 
     def accept_follow(self, profile_id):
-        profile = self.state.accept_follow(profile_id)
+        profile = self.player.accept_follow(profile_id)
         if not profile:
             return
         data = self.neighbors.get(profile.id)
@@ -97,12 +97,12 @@ class SocialController:
         uri = f"PYRO:social@{data['ip']}:{data['pyro_port']}"
         try:
             with Pyro5.api.Proxy(uri) as proxy:
-                proxy.confirm_follow(self.state.my_profile().to_dict())
+                proxy.confirm_follow(self.player.to_dict())
         except Exception:
             pass
 
     def deny_follow(self, profile_id):
-        self.state.deny_follow(profile_id)
+        self.player.deny_follow(profile_id)
 
     def send_dm(self, neighbor_id, text):
         data = self.neighbors.get(neighbor_id)
@@ -115,10 +115,10 @@ class SocialController:
             dist = ((self.player.x - v_pos[0]) ** 2 + (self.player.y - v_pos[1]) ** 2) ** 0.5
             is_nearby = dist <= FOLLOW_DISTANCE
 
-        if not (self.state.is_friend(neighbor_id) or is_nearby):
+        if not (self.player.is_friend(neighbor_id) or is_nearby):
             return
             
-        self.state.add_dm(neighbor_id, text, incoming=False)
+        self.player.add_dm(neighbor_id, text, incoming=False)
         threading.Thread(
             target=self._dm_thread,
             args=(neighbor_id, data, text),
@@ -129,7 +129,7 @@ class SocialController:
         uri = f"PYRO:social@{data['ip']}:{data['pyro_port']}"
         try:
             with Pyro5.api.Proxy(uri) as proxy:
-                proxy.send_dm(self.state.my_profile().to_dict(), text)
+                proxy.send_dm(self.player.to_dict(), text)
         except Exception:
             pass
 
@@ -137,7 +137,7 @@ class SocialController:
         data = self.neighbors.get(neighbor_id)
         if not data:
             return
-        self.state.add_reaction(neighbor_id, text)
+        self.player.add_reaction(neighbor_id, text)
         threading.Thread(
             target=self._reaction_thread,
             args=(neighbor_id, data, text),
@@ -148,16 +148,14 @@ class SocialController:
         uri = f"PYRO:social@{data['ip']}:{data['pyro_port']}"
         try:
             with Pyro5.api.Proxy(uri) as proxy:
-                proxy.send_reaction(self.state.my_profile().to_dict(), text)
+                proxy.send_reaction(self.player.to_dict(), text)
         except Exception:
             pass
 
     def incoming_dm(self, sender_profile, text):
-        profile = self.state.update_profile_from_data(sender_profile)
+        profile = self.player.update_profile_from_data(sender_profile)
         
-        # Permite DM si son amigos o si están cerca (están en la lista de vecinos)
-        # Como incoming_dm es llamado via RPC, el sender ya debe existir en neighbors pero para ser estrictos comprobamos la distancia si no son amigos.
-        if not self.state.is_friend(profile.id):
+        if not self.player.is_friend(profile.id):
             data = self.neighbors.get(profile.id)
             if not data:
                 return
@@ -168,21 +166,21 @@ class SocialController:
             if dist > FOLLOW_DISTANCE:
                 return
                 
-        self.state.add_dm(profile.id, text, incoming=True)
+        self.player.add_dm(profile.id, text, incoming=True)
 
     def incoming_reaction(self, sender_profile, text):
-        profile = self.state.update_profile_from_data(sender_profile)
-        self.state.add_reaction(profile.id, text)
+        profile = self.player.update_profile_from_data(sender_profile)
+        self.player.add_reaction(profile.id, text)
 
     def incoming_follow(self, sender_profile):
-        profile = self.state.update_profile_from_data(sender_profile)
-        response = self.state.incoming_follow_request(sender_profile)
+        profile = self.player.update_profile_from_data(sender_profile)
+        response = self.player.incoming_follow_request(sender_profile)
         return response
 
     def follow_confirm(self, sender_profile):
-        profile = self.state.update_profile_from_data(sender_profile)
-        self.state.outgoing_follow_accept(profile.to_dict())
-        self.state.pending_outgoing.discard(profile.id)
+        profile = self.player.update_profile_from_data(sender_profile)
+        self.player.outgoing_follow_accept(profile.to_dict())
+        self.player.pending_outgoing.discard(profile.id)
 
     def refresh_known_profiles(self):
         for v_id, v_data in self.neighbors.items():

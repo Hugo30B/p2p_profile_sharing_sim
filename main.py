@@ -17,7 +17,7 @@ creator = CharacterCreator(renderer)
 creator.run(mi_jugador)
 
 social_controller = SocialController(mi_jugador, vecinos)
-social_ui = SocialUI(social_controller.state)
+social_ui = SocialUI(mi_jugador)
 
 pyro_server = PyroServer(mi_jugador, social_controller)
 pyro_server.start()

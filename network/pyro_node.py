@@ -11,19 +11,7 @@ class SocialService:
     def get_profile(self):
         """Este método lo llama el vecino cuando está cerca"""
         print(f"Alguien ha pedido mi perfil ({self.player.nombre})")
-        return {
-            "id": self.player.id,
-            "nombre": self.player.nombre,
-            "skin_color": self.player.skin_color,
-            "shoes_color": self.player.shoes_color,
-            "pants_color": self.player.pants_color,
-            "tshirt_color": self.player.tshirt_color,
-            "glasses_type": self.player.glasses_type,
-            "hat_type": self.player.hat_type,
-            "bio": self.player.bio,
-            "status": self.player.status,
-            "mensaje": "Hola!"
-        }
+        return self.player.to_dict()
 
     def request_follow(self, requester_profile):
         """Solicitud de seguimiento"""

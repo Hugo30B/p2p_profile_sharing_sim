@@ -2,7 +2,7 @@ import threading
 import time
 import pygame
 import Pyro5.api
-from config import NEIGHBOR_TIMEOUT, PROXIMITY_THRESHOLD
+from config import NEIGHBOR_TIMEOUT, PROXIMITY_THRESHOLD, VIEW_COOLDOWN
 
 
 def intercambio(ip_vecino, puerto_vecino, neighbors_dict, target_id):
@@ -11,19 +11,10 @@ def intercambio(ip_vecino, puerto_vecino, neighbors_dict, target_id):
     try:
         with Pyro5.api.Proxy(uri) as proxy:
             perfil = proxy.get_profile()
-            neighbors_dict[target_id].update({
-                "skin_color": perfil["skin_color"],
-                "shoes_color": perfil["shoes_color"],
-                "pants_color": perfil["pants_color"],
-                "tshirt_color": perfil["tshirt_color"],
-                "glasses_type": perfil["glasses_type"],
-                "hat_type": perfil["hat_type"],
-                "nombre": perfil["nombre"],
-                "bio": perfil.get("bio", ""),
-                "status": perfil.get("status", ""),
-                "revelado": True,
-            })
-            print(f"Intercambio con {perfil['nombre']} exitoso!")
+            # Actualizar todos los campos recibidos
+            neighbors_dict[target_id].update(perfil)
+            neighbors_dict[target_id]["revelado"] = True
+            print(f"Intercambio con {perfil.get('nombre', 'Unknown')} exitoso!")
     except Exception as e:
         print(f"Error en intercambio con {ip_vecino}: {e}")
         if target_id in neighbors_dict:
@@ -79,17 +70,24 @@ def run_game_loop(player, neighbors, renderer, social_controller, social_ui):
             v_pos = v_data["pos"]
             dist = ((player.x - v_pos[0]) ** 2 + (player.y - v_pos[1]) ** 2) ** 0.5
 
-            if dist < PROXIMITY_THRESHOLD and not v_data.get("revelado"):
-                v_data["revelado"] = "proceso"
-                threading.Thread(
-                    target=intercambio,
-                    args=(v_data["ip"], v_data["pyro_port"], neighbors, v_id),
-                    daemon=True,
-                ).start()
+            if dist < PROXIMITY_THRESHOLD:
+                v_data["last_near_time"] = ahora
+                if not v_data.get("revelado"):
+                    v_data["revelado"] = "proceso"
+                    threading.Thread(
+                        target=intercambio,
+                        args=(v_data["ip"], v_data["pyro_port"], neighbors, v_id),
+                        daemon=True,
+                    ).start()
+            else:
+                # Cooldown de VIEW_COOLDOWN segundos para que vuelva a ser una silueta
+                last_near = v_data.get("last_near_time", 0)
+                if v_data.get("revelado") is True and ahora - last_near > VIEW_COOLDOWN:
+                    v_data["revelado"] = False
 
         social_controller.refresh_known_profiles()
         ui_state = social_ui.ui_state()
-        renderer.render(player, neighbors, social_controller.state, ui_state)
+        renderer.render(player, neighbors, ui_state)
         clock.tick(60)
 
     pygame.quit()
@@ -133,7 +131,7 @@ def _home_click(panel, pos, social_ui, social_controller):
     if not pending_box.collidepoint(x, y):
         return
     item_y = pending_box.y + 46
-    for profile in list(social_controller.state.pending_incoming.values())[:4]:
+    for profile in list(social_controller.player.pending_incoming.values())[:4]:
         row = pygame.Rect(pending_box.x + 12, item_y, 200, 22)
         accept = pygame.Rect(pending_box.x + 220, item_y, 50, 22)
         deny = pygame.Rect(pending_box.x + 280, item_y, 50, 22)
@@ -151,7 +149,7 @@ def _friends_click(panel, pos, social_ui, social_controller):
     list_box = pygame.Rect(panel.x + 16, panel.y + 16, 280, 398)
     if list_box.collidepoint(x, y):
         item_y = list_box.y + 44
-        for friend_id in list(social_controller.state.friends)[:8]:
+        for friend_id in list(social_controller.player.friends)[:8]:
             row = pygame.Rect(list_box.x + 12, item_y, 200, 22)
             if row.collidepoint(x, y):
                 social_ui.select_profile(friend_id)
@@ -164,7 +162,7 @@ def _friends_click(panel, pos, social_ui, social_controller):
         if social_ui.selected_profile_id:
             target_id = social_ui.selected_profile_id
             # Verificar si es amigo o está cerca para permitir DM
-            is_friend = social_controller.state.is_friend(target_id)
+            is_friend = social_controller.player.is_friend(target_id)
             is_nearby = False
             data = social_controller.neighbors.get(target_id)
             if data: # Esto es algo redundante, la distencia no se debería caluclar más de una vez en todo el código, debe estar globalizado de alguna manera de determinar si está cerca o no
@@ -182,7 +180,7 @@ def _friends_click(panel, pos, social_ui, social_controller):
     if follow_btn.collidepoint(x, y):
         if social_ui.selected_profile_id:
             target_id = social_ui.selected_profile_id
-            if not social_controller.state.is_friend(target_id) and not social_controller.state.has_pending_outgoing(target_id):
+            if not social_controller.player.is_friend(target_id) and not social_controller.player.has_pending_outgoing(target_id):
                 social_controller.request_follow(target_id)
 
 
@@ -190,7 +188,7 @@ def _list_click(panel, pos, social_ui, social_controller):
     x, y = pos
     start_x = panel.x + 12
     start_y = panel.y + 50
-    for idx, profile_id in enumerate(social_controller.state.social_list[:9]):
+    for idx, profile_id in enumerate(social_controller.player.social_list[:9]):
         col = idx % 3
         row = idx // 3
         slot = pygame.Rect(start_x + col * 220, start_y + row * 130, 200, 110)
