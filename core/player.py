@@ -7,6 +7,8 @@ class Player:
         self.nombre = f"User_{self.id[:4]}"
         self.x = random.randint(50, 750)
         self.y = random.randint(50, 550)
+        self.bio = "Hola!"
+        self.status = "Disponible"
         self.skin_color = (255, 224, 189) # Color piel por defecto
         self.shoes_color = (50, 50, 50)
         self.pants_color = (0, 0, 255)

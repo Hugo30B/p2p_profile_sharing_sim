@@ -4,8 +4,8 @@ import sys
 class CharacterCreator:
     def __init__(self, renderer):
         self.renderer = renderer
-        self.font = pygame.font.SysFont(None, 30)
-        self.small_font = pygame.font.SysFont(None, 24)
+        self.font = pygame.font.SysFont("palatino", 30)
+        self.small_font = pygame.font.SysFont("palatino", 22)
         # Paleta de colores extendida
         self.colors = [
             (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255),
@@ -24,13 +24,13 @@ class CharacterCreator:
             self.renderer.screen.fill((200, 200, 200))
             
             # Dibujar instrucciones
-            instr = self.font.render("Personaliza tu personaje. ENTER para empezar.", True, (0, 0, 0))
+            instr = self.font.render("Personaliza tu personaje. ENTER para empezar.", True, (40, 35, 30))
             self.renderer.screen.blit(instr, (50, 20))
             
-            part_text = self.font.render(f"Editando: {self.selected_part.upper()}", True, (0, 0, 0))
+            part_text = self.font.render(f"Editando: {self.selected_part.upper()}", True, (40, 35, 30))
             self.renderer.screen.blit(part_text, (50, 60))
             
-            hint_text = self.small_font.render("Teclas 1-6 para elegir parte. ESPACIO para cambiar tipo (gafas/gorro).", True, (50, 50, 50))
+            hint_text = self.small_font.render("Teclas 1-6 para elegir parte. ESPACIO para cambiar tipo (gafas/gorro).", True, (70, 60, 54))
             self.renderer.screen.blit(hint_text, (50, 85))
 
             # Dibujar opciones de color (en dos filas)
@@ -64,7 +64,7 @@ class CharacterCreator:
             # Dibujamos un fondo blanco para la previsualización
             pygame.draw.rect(self.renderer.screen, (255, 255, 255), (450, 150, 200, 300))
             pygame.draw.rect(self.renderer.screen, (0, 0, 0), (450, 150, 200, 300), 2)
-            self.renderer._draw_character(preview_pos, player_data)
+            self.renderer.draw_character(preview_pos, player_data)
 
             pygame.display.flip()
 

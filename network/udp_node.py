@@ -32,7 +32,8 @@ class UDPNode:
                 "id": self.player.id,
                 "pos": [self.player.x, self.player.y],
                 "pyro_port": self.player.pyro_port,
-                "nombre": self.player.nombre
+                "nombre": self.player.nombre,
+                "status": self.player.status
             }
             msg = json.dumps(data).encode()
             self.sock.sendto(msg, (BROADCAST_IP, UDP_PORT))
